@@ -3,7 +3,7 @@ import asyncio
 import logging
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
-from google.adk.sessions import DatabaseSessionService
+from google.adk.sessions import DatabaseSessionService, InMemorySessionService
 from google.adk.models.lite_llm import LiteLlm
 
 from google.genai import types
@@ -286,7 +286,13 @@ Frase-modelo: "Há destinos que costumam ser mais simples para passaporte angola
 """
 llma_model = LiteLlm("anthropic/claude-haiku-4-5-20251001")
 
-session_service = DatabaseSessionService(db_url=_db_url())
+_url = _db_url()
+if _url:
+    session_service = DatabaseSessionService(db_url=_url)
+    logger.info("Sessões: DatabaseSessionService")
+else:
+    session_service = InMemorySessionService()
+    logger.info("Sessões: InMemorySessionService (DATABASE_URL não definido)")
 
 _runner: Runner | None = None
 

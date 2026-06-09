@@ -2,10 +2,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-
-# Remove DATABASE_URL se existir — o bot usa a API do CRM, não uma DB directa.
-# Variáveis com sslmode= causam erros no asyncpg quando injectadas pelo Vercel/Neon.
-os.environ.pop("DATABASE_URL", None)
 import asyncio
 import threading
 import logging
