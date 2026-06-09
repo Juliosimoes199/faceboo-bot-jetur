@@ -1,0 +1,20 @@
+# Leads JEtur — gerado automaticamente pelo bot
+# Formato: um bloco por lead, separado por linha em branco
+
+--- LEAD #0001 ---
+Data:          2026-06-08 10:05:50
+Nome:          Júlio
+Serviço:       Passagem Aérea + Reserva de Hotel
+Qualificação:  Destino: Lisboa | Datas: 7 a 12 do próximo mês | Viajantes: 2 (pai e filho) | Ocasião: Viagem em família | Hotel: sem preferência específica
+Telefone:      +244949009580
+Email:         juliocesar@gmail.com
+Canal:         chat
+
+--- LEAD #0002 ---
+Data:          2026-06-08 10:43:13
+Nome:          Júlio
+Serviço:       Reserva de Hotel
+Qualificação:  Destino: Portugal. Datas: 2 a 4 de julho (2 noites). Composição: 2 pessoas (casal). Preferência: local tranquilo.
+Telefone:      +244951089226
+Email:         cesar@gmail.com
+Canal:         chat
