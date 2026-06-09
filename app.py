@@ -123,7 +123,13 @@ def webhook():
                             message_text = messaging_event["message"].get("text")
                             print(f"Texto da Mensagem: {message_text}")
                             
-                            _processar_e_responder("instagram", sender_id, message_text)
+                            # --- RESPOSTA AUTOMÁTICA AQUI ---
+                            # Criamos o texto que queremos devolver
+                            texto_resposta = _processar_e_responder("instagram", sender_id, message_text)
+                            #texto_resposta = f"Olá! Recebi a sua mensagem: '{message_text}'."
+                            
+                            # Executa o envio
+                            enviar_mensagem_facebook(sender_id, texto_resposta)
             
             return "EVENT_RECEIVED", 200
         except Exception as e:
