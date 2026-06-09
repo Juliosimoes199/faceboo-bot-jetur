@@ -3,15 +3,24 @@ import asyncio
 import logging
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
+from google.adk.sessions import DatabaseSessionService
 from google.adk.models.lite_llm import LiteLlm
 
 from google.genai import types
 from .tools import registrar_lead, notificar_equipa
+from .memory import get_perfil
 
 logger = logging.getLogger(__name__)
 
 MODEL = os.environ.get("JETUR_MODEL", "gemini/gemini-2.0-flash")
+
+def _db_url() -> str:
+    url = os.environ.get("DATABASE_URL", "")
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
 
 INSTRUCAO_JETUR = """
 Você é o assistente virtual da JEtur Agência de Viagem e Turismo, com sede em Luanda, Angola.
@@ -273,16 +282,24 @@ Frase-modelo: "Há destinos que costumam ser mais simples para passaporte angola
 """
 llma_model = LiteLlm("anthropic/claude-haiku-4-5-20251001")
 
-session_service = InMemorySessionService()
+session_service = DatabaseSessionService(db_url=_db_url())
 
 _runner: Runner | None = None
+
+INSTRUCAO_SISTEMA = INSTRUCAO_JETUR + """
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HISTÓRICO DESTE UTILIZADOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{historico_cliente}
+"""
 
 
 def _criar_runner() -> Runner:
     agente = LlmAgent(
         name="JEturBot",
         model=llma_model,
-        instruction=INSTRUCAO_JETUR,
+        instruction=INSTRUCAO_SISTEMA,
         tools=[registrar_lead, notificar_equipa],
     )
 
@@ -309,10 +326,17 @@ async def processar_mensagem(session_id: str, user_id: str, texto: str) -> str:
         session_id=session_id,
     )
     if session is None:
+        perfil = get_perfil(user_id)
+        estado_inicial = {
+            "sender_id": user_id,
+            "session_id": session_id,
+            "historico_cliente": perfil or "(primeiro contacto)",
+        }
         await session_service.create_session(
             app_name="jetur_bot",
             user_id=user_id,
             session_id=session_id,
+            state=estado_inicial,
         )
 
     content = types.Content(role="user", parts=[types.Part(text=texto)])
@@ -324,8 +348,18 @@ async def processar_mensagem(session_id: str, user_id: str, texto: str) -> str:
         new_message=content,
     ):
         if event.is_final_response() and event.content and event.content.parts:
-            texto = "".join(p.text for p in event.content.parts if p.text)
-            if texto:
-                resposta_final = texto
+            resposta = "".join(p.text for p in event.content.parts if p.text)
+            if resposta:
+                resposta_final = resposta
+
+    # Se o lead foi registado, a sessão é apagada — próximo contacto começa limpo com perfil injectado
+    session_atual = await session_service.get_session(
+        app_name="jetur_bot", user_id=user_id, session_id=session_id
+    )
+    if session_atual and session_atual.state.get("sessao_concluida"):
+        await session_service.delete_session(
+            app_name="jetur_bot", user_id=user_id, session_id=session_id
+        )
+        logger.info(f"Sessão {session_id} apagada após registo de lead.")
 
     return resposta_final

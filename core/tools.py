@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 from datetime import date
+from google.adk.tools import ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ def registrar_lead(
     telefone: str,
     email: str,
     canal: str,
+    tool_context: ToolContext,
 ) -> str:
     """
     Regista um lead qualificado no CRM JEtur via API.
@@ -50,6 +52,18 @@ def registrar_lead(
         if resp.status_code == 201:
             crm_id = resp.json().get("id", "—")
             logger.info(f"Lead registado no CRM: id={crm_id} nome={nome} servico={servico} canal={canal}")
+
+            # Salva perfil de longo prazo e sinaliza fim de sessão
+            sender_id = tool_context.state.get("sender_id", "")
+            if sender_id:
+                from .memory import save_perfil
+                perfil = (
+                    f"Nome: {nome} | Serviço: {servico} | Tel: {telefone} | "
+                    f"Email: {email} | Canal: {canal} | Detalhe: {qualificacao}"
+                )
+                save_perfil(sender_id, perfil)
+            tool_context.state["sessao_concluida"] = True
+
             return f"Lead registado com sucesso no CRM. ID: {crm_id}. Nome: {nome}. Serviço: {servico}."
         else:
             erro = resp.json().get("erro", resp.text)
