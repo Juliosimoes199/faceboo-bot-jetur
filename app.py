@@ -38,12 +38,12 @@ def _processar_e_responder(canal: str, sender_id: str, texto: str) -> str:
         logger.warning(f"Resposta não enviada ao canal {canal} / {sender_id}")
     return resposta
 
-@pp.route("/")
+@app.route("/")
 def home():
     return "ola do flask"
 # ── Webhook Meta (IG DM + FB Messenger) ──────────────────────────────────────
 
-@app.get("/webhook")
+@app.route("/webhook", methods=["GET"])
 def webhook_meta_verificar():
     mode      = request.args.get("hub.mode")
     token     = request.args.get("hub.verify_token")
@@ -56,7 +56,7 @@ def webhook_meta_verificar():
     return "Token inválido", 403
 
 
-@app.post("/webhook")
+@app.route("/webhook", methods=["POST"])
 def webhook_meta_receber():
     try:
         body  = request.get_json(silent=True) or {}
@@ -99,7 +99,7 @@ def webhook_meta_receber():
 
 # ── Webhook WhatsApp Cloud API ────────────────────────────────────────────────
 
-@app.get("/whatsapp/webhook")
+@app.route("/whatsapp/webhook", methods=["GET"])
 def webhook_wa_verificar():
     mode      = request.args.get("hub.mode")
     token     = request.args.get("hub.verify_token")
@@ -112,7 +112,7 @@ def webhook_wa_verificar():
     return "Token inválido", 403
 
 
-@app.post("/whatsapp/webhook")
+@app.route("/whatsapp/webhook", methods=["POST"])
 def webhook_wa_receber():
     try:
         body = request.get_json(silent=True) or {}
@@ -139,7 +139,7 @@ def webhook_wa_receber():
 
 # ── Teste local (sem canal externo) ──────────────────────────────────────────
 
-@app.post("/chat")
+@app.route("/chat", methods = ["POST"])
 def chat_directo():
     """
     Teste local: { "session_id": "...", "user_id": "...", "texto": "..." }
@@ -162,7 +162,7 @@ def chat_directo():
         return jsonify({"erro": str(e)}), 500
 
 
-@app.get("/health")
+@app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "servico": "jetur-bot"}), 200
 
