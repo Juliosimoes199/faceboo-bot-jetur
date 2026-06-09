@@ -38,7 +38,9 @@ def _processar_e_responder(canal: str, sender_id: str, texto: str) -> str:
         logger.warning(f"Resposta não enviada ao canal {canal} / {sender_id}")
     return resposta
 
-
+@pp.route("/")
+def home():
+    return "ola do flask"
 # ── Webhook Meta (IG DM + FB Messenger) ──────────────────────────────────────
 
 @app.get("/webhook")
