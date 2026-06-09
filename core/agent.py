@@ -15,11 +15,15 @@ logger = logging.getLogger(__name__)
 MODEL = os.environ.get("JETUR_MODEL", "gemini/gemini-2.0-flash")
 
 def _db_url() -> str:
+    import re
     url = os.environ.get("DATABASE_URL", "")
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
-    elif url.startswith("postgresql://"):
+    elif url.startswith("postgresql://") and "+asyncpg" not in url:
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    # asyncpg usa ssl= em vez de sslmode= — converte para evitar TypeError
+    url = re.sub(r'([?&])sslmode=require', r'\1ssl=require', url)
+    url = re.sub(r'([?&])sslmode=\w+', r'\1', url)
     return url
 
 INSTRUCAO_JETUR = """
