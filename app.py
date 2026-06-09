@@ -8,6 +8,7 @@ import logging
 from flask import Flask, request, jsonify
 from core.agent import processar_mensagem
 from core.messenger import enviar_mensagem
+import requests
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -38,133 +39,103 @@ def _processar_e_responder(canal: str, sender_id: str, texto: str) -> str:
         logger.warning(f"Resposta não enviada ao canal {canal} / {sender_id}")
     return resposta
 
+
 @app.route("/")
 def home():
-    return "ola do flask"
-# ── Webhook Meta (IG DM + FB Messenger) ──────────────────────────────────────
-
-@app.route("/webhook", methods=["GET"])
-def webhook_meta_verificar():
-    mode      = request.args.get("hub.mode")
-    token     = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
-
-    if mode == "subscribe" and token == VERIFY_TOKEN_META:
-        logger.info("Webhook Meta verificado.")
-        return challenge, 200
-
-    return "Token inválido", 403
+    return "Jetur Bot is running!"
 
 
-@app.route("/webhook", methods=["POST"])
-def webhook_meta_receber():
+
+
+def enviar_mensagem_facebook(customer_psid, text_to_send):
+    """Função com a URL da API da Meta corrigida"""
+    PAGE_ACCESS_TOKEN = "EAAOb84AHDsEBRmDu0VIVVZAAIZCpo13GWeCrQzWypKAeHhgefOeUKnwulul8av62rGaSbIiuADSVXxdYE2o8disBSgwBID5bTCIZBo9VZA3S3m0hn50MGUqOptYcY5FaEZADoVeJgGMjZB5vBXG0toXjqMDbKz3C2yhokwtv0MUsUZCN8awUw74kuZAW09B3LLnx7wHWZAwZDZD"
+    
+    # URL CORRIGIDA: Aponta para o endpoint oficial de mensagens da API Graph da Meta
+    url = "https://graph.facebook.com/v21.0/me/messages"
+    
+    params = {
+        "access_token": PAGE_ACCESS_TOKEN
+    }
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "recipient": {
+            "id": str(customer_psid)
+        },
+        "messaging_type": "RESPONSE",
+        "message": {
+            "text": text_to_send
+        }
+    }
+    
     try:
-        body  = request.get_json(silent=True) or {}
-        objeto = body.get("object", "")
-
-        if objeto not in ("page", "instagram"):
-            return "ok", 200
-
-        canal = "instagram" if objeto == "instagram" else "facebook"
-
-        for entry in body.get("entry", []):
-            for ev in entry.get("messaging", []):
-                sender_id = ev.get("sender", {}).get("id", "")
-                msg = ev.get("message", {})
-                if not sender_id or "text" not in msg:
-                    continue
-                texto = msg["text"].strip()
-                if texto:
-                    logger.info(f"[{canal}] De {sender_id}: {texto[:80]}")
-                    _processar_e_responder(canal, sender_id, texto)
-
-            for change in entry.get("changes", []):
-                if change.get("field") != "messages":
-                    continue
-                for msg in change.get("value", {}).get("messages", []):
-                    if msg.get("type") != "text":
-                        continue
-                    sender_id = msg.get("from", "")
-                    texto = msg.get("text", {}).get("body", "").strip()
-                    if sender_id and texto:
-                        logger.info(f"[instagram] De {sender_id}: {texto[:80]}")
-                        _processar_e_responder("instagram", sender_id, texto)
-
-        return "ok", 200
-
+        response = requests.post(url, params=params, json=payload, headers=headers)
+        
+        # Exibe o status e o texto bruto da resposta para facilitar o diagnóstico caso falhe por outro motivo
+        print(f"Status Code do Facebook: {response.status_code}")
+        print(f"Texto bruto recebido: {response.text}")
+        
+        response_data = response.json()
+        print(f"Resposta oficial da API do Facebook: {response_data}")
+        return response_data
     except Exception as e:
-        logger.error(f"Erro no webhook Meta: {e}")
-        return "erro", 500
+        print(f"Erro ao disparar requisição POST para o Facebook: {e}")
+        return None
 
 
-# ── Webhook WhatsApp Cloud API ────────────────────────────────────────────────
 
-@app.route("/whatsapp/webhook", methods=["GET"])
-def webhook_wa_verificar():
-    mode      = request.args.get("hub.mode")
-    token     = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
+@app.route("/webhook", methods=["GET", "POST"])
+def webhook():
+    VERIFY_TOKEN = "julioteste"
+    
+    # 1. TRATAMENTO PARA VALIDAÇÃO (GET)
+    if request.method == "GET":
+        mode = request.args.get("hub.mode")
+        verify_token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
+        
+        if mode == "subscribe" and verify_token == VERIFY_TOKEN:
+            print("Webhook verificado com sucesso!")
+            return challenge, 200
+        else:
+            print("Falha na verificação do webhook.")
+            return "Token de verificação inválido", 403
 
-    if mode == "subscribe" and token == VERIFY_TOKEN_WA:
-        logger.info("Webhook WhatsApp verificado.")
-        return challenge, 200
+    # 2. TRATAMENTO PARA RECEBER MENSAGENS (POST)
+    if request.method == "POST":
+        try:
+            body = request.get_json()
+            
+            if body and "object" in body and body["object"] == "page":
+                for entry in body.get("entry", []):
+                    if "messaging" in entry and len(entry["messaging"]) > 0:
+                        messaging_event = entry["messaging"][0]
+                        print(f"Evento de Mensagem Recebido: {messaging_event}")
+                        
+                        sender_id = messaging_event["sender"]["id"]
+                        print(f"ID do Remetente (PSID): {sender_id}")
+                        
+                        if "message" in messaging_event:
+                            message_text = messaging_event["message"].get("text")
+                            print(f"Texto da Mensagem: {message_text}")
+                            
+                            # --- RESPOSTA AUTOMÁTICA AQUI ---
+                            # Criamos o texto que queremos devolver
+                            texto_resposta = _processar_e_responder("instagram", sender_id, message_text)
+                            #texto_resposta = f"Olá! Recebi a sua mensagem: '{message_text}'."
+                            
+                            # Executa o envio
+                            enviar_mensagem_facebook(sender_id, texto_resposta)
+            
+            return "EVENT_RECEIVED", 200
+        except Exception as e:
+            print(f"Erro ao processar POST: {e}")
+            return "Erro interno", 500
 
-    return "Token inválido", 403
-
-
-@app.route("/whatsapp/webhook", methods=["POST"])
-def webhook_wa_receber():
-    try:
-        body = request.get_json(silent=True) or {}
-
-        for entry in body.get("entry", []):
-            for change in entry.get("changes", []):
-                if change.get("field") != "messages":
-                    continue
-                for msg in change.get("value", {}).get("messages", []):
-                    if msg.get("type") != "text":
-                        continue
-                    sender_phone = msg.get("from", "")
-                    texto = msg.get("text", {}).get("body", "").strip()
-                    if sender_phone and texto:
-                        logger.info(f"[whatsapp] De {sender_phone}: {texto[:80]}")
-                        _processar_e_responder("whatsapp", sender_phone, texto)
-
-        return "ok", 200
-
-    except Exception as e:
-        logger.error(f"Erro no webhook WhatsApp: {e}")
-        return "erro", 500
-
-
-# ── Teste local (sem canal externo) ──────────────────────────────────────────
-
-@app.route("/chat", methods = ["POST"])
-def chat_directo():
-    """
-    Teste local: { "session_id": "...", "user_id": "...", "texto": "..." }
-    session_id e user_id são opcionais (usam valores de teste por defeito).
-    """
-    try:
-        dados      = request.get_json(silent=True) or {}
-        session_id = dados.get("session_id", "test_session")
-        user_id    = dados.get("user_id", "test_user")
-        texto      = dados.get("texto", "").strip()
-
-        if not texto:
-            return jsonify({"erro": "Campo 'texto' é obrigatório"}), 400
-
-        resposta = _run(processar_mensagem(session_id, user_id, texto))
-        return jsonify({"resposta": resposta}), 200
-
-    except Exception as e:
-        logger.error(f"Erro no chat directo: {e}")
-        return jsonify({"erro": str(e)}), 500
-
-
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok", "servico": "jetur-bot"}), 200
 
 
 if __name__ == "__main__":
