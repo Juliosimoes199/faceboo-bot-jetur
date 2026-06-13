@@ -138,10 +138,7 @@ def webhook():
 
 def enviar_mensagem_instagram(igsid: str, texto: str):
     """Envia mensagem de texto para um usuário do Instagram via Graph API."""
-    PAGE_ACCESS_TOKEN_INSTAGRAM = os.environ.get(
-        "PAGE_ACCESS_TOKEN_INSTAGRAM",
-        "IGAAR1nZBZBTFatBZAFlEQW1nOUlDUXkwNHRabU9nSkhRdXdvb25kNDgtLW16eUVRUlkwT09oQVBaOC1NbE05YXpDMl90Y1NsbU9aWkJlZAEFNdk9pX2Y0LVBuR19FMG42NzE3bFdpaGRhYkxzNmVRVWd1S1pLa3RJZAENCLUw4YnVRTQZDZD"
-    )
+    PAGE_ACCESS_TOKEN_INSTAGRAM = "IGAAR1nZBZBTFatBZAFlEQW1nOUlDUXkwNHRabU9nSkhRdXdvb25kNDgtLW16eUVRUlkwT09oQVBaOC1NbE05YXpDMl90Y1NsbU9aWkJlZAEFNdk9pX2Y0LVBuR19FMG42NzE3bFdpaGRhYkxzNmVRVWd1S1pLa3RJZAENCLUw4YnVRTQZDZD"
     url = "https://graph.facebook.com/v21.0/me/messages"
     payload = {
         "recipient": {"id": igsid},
