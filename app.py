@@ -171,7 +171,7 @@ def enviar_mensagem_instagram11(igsid: str, texto: str):
     ig_id = "17841448397273178"
     
     # GARANTA QUE ESSA LINHA TENHA A BARRA APÓS O DOMÍNIO E A VERSÃO
-    url = f"https://graph.facebook.com/v21.0/{ig_id}/messages"
+    url = f"https://graph.instagram.com/v21.0/{ig_id}/messages"
     
     payload = {
         "recipient": {"id": igsid},

@@ -47,9 +47,9 @@ def enviar_instagram(recipient_id: str, texto: str) -> bool:
     if not token:
         logger.info(f"[instagram] (sem token) → {recipient_id}: {texto[:80]}")
         return True
-    
-    # Correção preventiva: garante que a barra separe estritamente o domínio, versão e ID
-    url = f"https://graph.facebook.com/{META_API_VERSION}/{INSTAGRAM_BUSINESS_ID}/messages"
+
+    # Token IGAAR é Instagram User Access Token — requer graph.instagram.com, não graph.facebook.com
+    url = f"https://graph.instagram.com/{META_API_VERSION}/{INSTAGRAM_BUSINESS_ID}/messages"
     return _post(url, {
         "recipient": {"id": recipient_id},
         "messaging_type": "RESPONSE",
