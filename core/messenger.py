@@ -4,11 +4,12 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-META_PAGE_TOKEN   = os.environ.get("META_PAGE_TOKEN", "")
-META_IG_TOKEN     = os.environ.get("META_IG_TOKEN", "")
-META_API_VERSION  = os.environ.get("META_API_VERSION", "v20.0")
-WHATSAPP_TOKEN    = os.environ.get("WHATSAPP_TOKEN", "")
-WHATSAPP_PHONE_ID = os.environ.get("WHATSAPP_PHONE_ID", "")
+META_PAGE_TOKEN      = os.environ.get("META_PAGE_TOKEN", "")
+META_IG_TOKEN        = os.environ.get("META_IG_TOKEN") or os.environ.get("PAGE_ACCESS_TOKEN_INSTAGRAM", "")
+INSTAGRAM_BUSINESS_ID = os.environ.get("INSTAGRAM_BUSINESS_ID", "17841448397273178")
+META_API_VERSION     = os.environ.get("META_API_VERSION", "v21.0")
+WHATSAPP_TOKEN       = os.environ.get("WHATSAPP_TOKEN", "")
+WHATSAPP_PHONE_ID    = os.environ.get("WHATSAPP_PHONE_ID", "")
 
 
 def _post(url: str, payload: dict, token: str) -> bool:
@@ -37,12 +38,18 @@ def enviar_facebook(recipient_id: str, texto: str) -> bool:
 
 
 def enviar_instagram(recipient_id: str, texto: str) -> bool:
-    token = META_IG_TOKEN or META_PAGE_TOKEN
+    token = META_IG_TOKEN
     if not token:
         logger.info(f"[instagram] (sem token) → {recipient_id}: {texto[:80]}")
         return True
-    url = f"https://graph.facebook.com/{META_API_VERSION}/me/messages"
-    return _post(url, {"recipient": {"id": recipient_id}, "message": {"text": texto}}, token)
+    # Instagram Business Messaging API — endpoint usa o ID da conta IG, não /me
+    url = f"https://graph.facebook.com/{META_API_VERSION}/{INSTAGRAM_BUSINESS_ID}/messages"
+    payload = {
+        "recipient": {"id": recipient_id},
+        "messaging_type": "RESPONSE",
+        "message": {"text": texto},
+    }
+    return _post(url, payload, token)
 
 
 def enviar_whatsapp(recipient_phone: str, texto: str) -> bool:

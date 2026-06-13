@@ -200,8 +200,7 @@ def instagram_webhook():
                         texto = msg.get("text")
                         if sender_igsid and texto:
                             logger.info(f"Instagram msg de {sender_igsid}: {texto}")
-                            resposta = _processar_e_responder("instagram", sender_igsid, texto)
-                            enviar_mensagem_instagram(sender_igsid, resposta)
+                            _processar_e_responder("instagram", sender_igsid, texto)
 
             return "EVENT_RECEIVED", 200
         except Exception as e:
