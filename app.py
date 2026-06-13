@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+
+
 VERIFY_TOKEN_META = os.environ.get("VERIFY_TOKEN_META", "jetur_verify_2024")
 VERIFY_TOKEN_WA   = os.environ.get("VERIFY_TOKEN_WA", "jetur_verify_2024")
 
@@ -163,15 +165,15 @@ def enviar_mensagem_instagram2(igsid: str, texto: str):
         logger.error(f"Erro ao enviar mensagem Instagram: {e}")
         return None
 
-
 def enviar_mensagem_instagram(igsid: str, texto: str):
-    """Envia mensagem via Instagram Business Messaging API com o Token Corrigido."""
-    # Cole aqui o token gerado no botão "Generate token"
+    """Envia mensagem via Instagram Business Messaging API com o Token e URL Corrigidos."""
     token = "IGAAR1nZBZBTFatBZAFpPVWRMTUF0VFdIbEZAXYS1DQjk2aFdlVGVLWDgwc09YNUFkWHM2em5rbVQtYk5KOXBTZA0t6NmJmOVBaOEk5aVJZAS2hzbF9YUWNNZA0ZAqSjdrd19SZA1JxTmtXUERFaWFlcjBkOUJ6MGRKSURaclhCR1NoZAnJWTQZDZD"
     
     ig_id = "17841448397273178"  # ID correto da conta level_776
     
-    url = f"https://facebook.com{ig_id}/messages"
+    # URL CORRIGIDA: Inclui o subdomínio graph, a versão v21.0 e as barras corretas
+    url = f"https://graph.facebook.com/v21.0/{ig_id}/messages"
+    
     payload = {
         "recipient": {"id": igsid},
         "messaging_type": "RESPONSE",
@@ -189,6 +191,7 @@ def enviar_mensagem_instagram(igsid: str, texto: str):
     except Exception as e:
         logger.error(f"Erro ao enviar mensagem Instagram: {e}")
         return None
+
 
 
 @app.route("/webhook/instagram", methods=["GET", "POST"])
