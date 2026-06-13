@@ -127,6 +127,7 @@ def webhook():
                             
                             # --- RESPOSTA AUTOMÁTICA AQUI ---
                             # Criamos o texto que queremos devolver
+                            message_text = f"{message_text} \ncanal de contato: *facebook*"
                             texto_resposta = _processar_e_responder("facebook", sender_id, message_text)
                             #texto_resposta = f"Olá! Recebi a sua mensagem: '{message_text}'."
                             
@@ -226,6 +227,7 @@ def instagram_webhook():
                             continue
 
                         texto = msg.get("text")
+                        texto = f"{texto} \ncanal de contato: *instagram*"
                         if sender_igsid and texto:
                             logger.info(f"Instagram msg de {sender_igsid}: {texto}")
                             _processar_e_responder("instagram", sender_igsid, texto)
