@@ -125,7 +125,7 @@ def webhook():
                             
                             # --- RESPOSTA AUTOMÁTICA AQUI ---
                             # Criamos o texto que queremos devolver
-                            texto_resposta = _processar_e_responder("instagram", sender_id, message_text)
+                            texto_resposta = _processar_e_responder("facebook", sender_id, message_text)
                             #texto_resposta = f"Olá! Recebi a sua mensagem: '{message_text}'."
                             
                             # Executa o envio
@@ -136,6 +136,24 @@ def webhook():
             print(f"Erro ao processar POST: {e}")
             return "Erro interno", 500
 
+@app.route("/webhook/instagram", methods=["GET", "POST"])
+def instagram_webhook():
+    
+    VERIFY_TOKEN = "instagramjetur2026"
+    
+    
+     # 1. TRATAMENTO PARA VALIDAÇÃO (GET)
+    if request.method == "GET":
+        mode = request.args.get("hub.mode")
+        verify_token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
+        
+        if mode == "subscribe" and verify_token == VERIFY_TOKEN:
+            print("Webhook verificado com sucesso!")
+            return challenge, 200
+        else:
+            print("Falha na verificação do webhook.")
+            return "Token de verificação inválido", 403
 
 
 if __name__ == "__main__":
