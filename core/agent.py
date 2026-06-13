@@ -307,7 +307,7 @@ def obter_runner() -> Runner:
     return _runner
 
 
-async def processar_mensagem(session_id: str, user_id: str, texto: str) -> str:
+async def processar_mensagem(session_id: str, user_id: str, texto: str, canal: str = "") -> str:
     runner = obter_runner()
 
     session = await session_service.get_session(
@@ -320,6 +320,7 @@ async def processar_mensagem(session_id: str, user_id: str, texto: str) -> str:
             app_name="jetur_bot",
             user_id=user_id,
             session_id=session_id,
+            state={"canal": canal, "sender_id": user_id},
         )
 
     content = types.Content(role="user", parts=[types.Part(text=texto)])

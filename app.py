@@ -6,7 +6,7 @@ import asyncio
 import threading
 import logging
 from flask import Flask, request, jsonify
-from core.agent import processar_mensagem
+from core.agent import processar_mensagem, session_service
 from core.messenger import enviar_mensagem
 import requests
 
@@ -35,7 +35,7 @@ def _session_id(canal: str, sender_id: str) -> str:
 
 def _processar_e_responder(canal: str, sender_id: str, texto: str) -> str:
     session_id = _session_id(canal, sender_id)
-    resposta = _run(processar_mensagem(session_id, sender_id, texto))
+    resposta = _run(processar_mensagem(session_id, sender_id, texto, canal))
     enviado = enviar_mensagem(canal, sender_id, resposta)
     if not enviado:
         logger.warning(f"Resposta não enviada ao canal {canal} / {sender_id}")
@@ -236,6 +236,64 @@ def instagram_webhook():
             logger.error(f"Erro ao processar POST do Instagram: {e}")
             return "Erro interno", 500
 
+
+# ─── Endpoints de administração de sessões ───────────────────────────────────
+# Header obrigatório: x-admin-token: <ADMIN_TOKEN>
+
+def _require_admin(req):
+    token = os.environ.get("ADMIN_TOKEN", "")
+    if not token or req.headers.get("x-admin-token") != token:
+        return jsonify({"erro": "Token de admin inválido ou em falta."}), 401
+    return None
+
+
+@app.route("/admin/sessao", methods=["DELETE"])
+def apagar_sessao():
+    """Apaga a sessão de um utilizador específico.
+    Body JSON: { "sender_id": "123456", "canal": "facebook" }
+    """
+    err = _require_admin(request)
+    if err:
+        return err
+    body = request.get_json() or {}
+    sender_id = body.get("sender_id", "").strip()
+    canal = body.get("canal", "").strip()
+    if not sender_id or not canal:
+        return jsonify({"erro": "Campos obrigatórios: sender_id, canal."}), 400
+
+    session_id = f"{canal}_{sender_id}"
+    try:
+        _run(session_service.delete_session(
+            app_name="jetur_bot",
+            user_id=sender_id,
+            session_id=session_id,
+        ))
+        logger.info(f"Sessão apagada manualmente: {session_id}")
+        return jsonify({"ok": True, "session_id": session_id})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+
+@app.route("/admin/sessoes/<sender_id>", methods=["GET"])
+def listar_sessoes(sender_id):
+    """Lista as sessões activas de um utilizador."""
+    err = _require_admin(request)
+    if err:
+        return err
+    try:
+        resultado = _run(session_service.list_sessions(
+            app_name="jetur_bot",
+            user_id=sender_id,
+        ))
+        sessoes = [
+            {"session_id": s.id, "canal": s.id.split("_")[0] if "_" in s.id else "?"}
+            for s in (resultado.sessions if hasattr(resultado, "sessions") else [])
+        ]
+        return jsonify({"sender_id": sender_id, "sessoes": sessoes})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5010, debug=True)

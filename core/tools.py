@@ -32,13 +32,16 @@ def registrar_lead(
     Returns:
         Confirmação com o ID do lead registado no CRM.
     """
+    # Usa o canal da sessão (origem real do webhook) em vez do que o LLM preenche
+    canal_real = tool_context.state.get("canal") or canal
+
     payload = {
         "nomeCliente":   nome,
         "contacto":      telefone,
         "pacoteServico": servico,
         "qualificacao":  qualificacao,
         "email":         email,
-        "canal":         canal,
+        "canal":         canal_real,
         "status":        "novo_lead",
         "prioridade":    "medio",
         "dataEntrada":   date.today().isoformat(),
