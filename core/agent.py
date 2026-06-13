@@ -271,8 +271,8 @@ DESTINOS INTERNACIONAIS SEM VISTO (indicativo — sempre confirmar com equipa):
 Namíbia, Maurícia, Seychelles, Cabo Verde, Ruanda, Moçambique, São Tomé e Príncipe.
 Frase-modelo: "Há destinos que costumam ser mais simples para passaporte angolano, como Namíbia, Maurícia e Cabo Verde. Ainda assim, as condições podem mudar. Vou encaminhar para a equipa confirmar antes de qualquer decisão."
 """
-llma_model = LiteLlm("anthropic/claude-haiku-4-5-20251001")
-
+#llma_model = LiteLlm("anthropic/claude-haiku-4-5-20251001")
+llma_model = "gemini-2.0-flash"
 session_service = InMemorySessionService()
 
 _runner: Runner | None = None
