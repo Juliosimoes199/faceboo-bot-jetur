@@ -137,9 +137,14 @@ def webhook():
             return "Erro interno", 500
 
 def enviar_mensagem_instagram(igsid: str, texto: str):
-    """Envia mensagem de texto para um usuário do Instagram via Graph API."""
-    PAGE_ACCESS_TOKEN_INSTAGRAM = "IGAAR1nZBZBTFatBZAFlEQW1nOUlDUXkwNHRabU9nSkhRdXdvb25kNDgtLW16eUVRUlkwT09oQVBaOC1NbE05YXpDMl90Y1NsbU9aWkJlZAEFNdk9pX2Y0LVBuR19FMG42NzE3bFdpaGRhYkxzNmVRVWd1S1pLa3RJZAENCLUw4YnVRTQZDZD"
-    url = "https://graph.facebook.com/v21.0/me/messages"
+    """Envia mensagem via Instagram Business Messaging API."""
+    token = os.environ.get("PAGE_ACCESS_TOKEN_INSTAGRAM")
+    ig_id = os.environ.get("INSTAGRAM_BUSINESS_ID", "17841448397273178")  # ID da conta nível_776
+    if not token:
+        logger.error("PAGE_ACCESS_TOKEN_INSTAGRAM não configurado nas variáveis de ambiente.")
+        return None
+    # Endpoint da Instagram Business Messaging API — usa o ID da conta IG, não /me
+    url = f"https://graph.facebook.com/v21.0/{ig_id}/messages"
     payload = {
         "recipient": {"id": igsid},
         "messaging_type": "RESPONSE",
@@ -148,7 +153,7 @@ def enviar_mensagem_instagram(igsid: str, texto: str):
     try:
         resp = requests.post(
             url,
-            params={"access_token": PAGE_ACCESS_TOKEN_INSTAGRAM},
+            params={"access_token": token},
             json=payload,
             headers={"Content-Type": "application/json"},
         )
