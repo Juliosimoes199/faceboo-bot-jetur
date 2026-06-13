@@ -136,7 +136,7 @@ def webhook():
             print(f"Erro ao processar POST: {e}")
             return "Erro interno", 500
 
-def enviar_mensagem_instagram(igsid: str, texto: str):
+def enviar_mensagem_instagram2(igsid: str, texto: str):
     """Envia mensagem via Instagram Business Messaging API."""
     token = os.environ.get("PAGE_ACCESS_TOKEN_INSTAGRAM")
     ig_id = os.environ.get("INSTAGRAM_BUSINESS_ID", "17841448397273178")  # ID da conta nível_776
@@ -145,6 +145,33 @@ def enviar_mensagem_instagram(igsid: str, texto: str):
         return None
     # Endpoint da Instagram Business Messaging API — usa o ID da conta IG, não /me
     url = f"https://graph.facebook.com/v21.0/{ig_id}/messages"
+    payload = {
+        "recipient": {"id": igsid},
+        "messaging_type": "RESPONSE",
+        "message": {"text": texto},
+    }
+    try:
+        resp = requests.post(
+            url,
+            params={"access_token": token},
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        logger.info(f"Instagram send status={resp.status_code} body={resp.text}")
+        return resp.json()
+    except Exception as e:
+        logger.error(f"Erro ao enviar mensagem Instagram: {e}")
+        return None
+
+
+def enviar_mensagem_instagram(igsid: str, texto: str):
+    """Envia mensagem via Instagram Business Messaging API com o Token Corrigido."""
+    # Cole aqui o token gerado no botão "Generate token"
+    token = "IGAAR1nZBZBTFatBZAFpPVWRMTUF0VFdIbEZAXYS1DQjk2aFdlVGVLWDgwc09YNUFkWHM2em5rbVQtYk5KOXBTZA0t6NmJmOVBaOEk5aVJZAS2hzbF9YUWNNZA0ZAqSjdrd19SZA1JxTmtXUERFaWFlcjBkOUJ6MGRKSURaclhCR1NoZAnJWTQZDZD"
+    
+    ig_id = "17841448397273178"  # ID correto da conta level_776
+    
+    url = f"https://facebook.com{ig_id}/messages"
     payload = {
         "recipient": {"id": igsid},
         "messaging_type": "RESPONSE",
@@ -200,7 +227,8 @@ def instagram_webhook():
                         texto = msg.get("text")
                         if sender_igsid and texto:
                             logger.info(f"Instagram msg de {sender_igsid}: {texto}")
-                            _processar_e_responder("instagram", sender_igsid, texto)
+                            #_processar_e_responder("instagram", sender_igsid, texto)
+                            enviar_mensagem_instagram(sender_igsid, f"Recebi sua mensagem: '{texto}'")
 
             return "EVENT_RECEIVED", 200
         except Exception as e:
