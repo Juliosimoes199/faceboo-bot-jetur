@@ -53,16 +53,18 @@ def registrar_lead(
             crm_id = resp.json().get("id", "—")
             logger.info(f"Lead registado no CRM: id={crm_id} nome={nome} servico={servico} canal={canal}")
 
-            # Salva perfil de longo prazo e sinaliza fim de sessão
-            sender_id = tool_context.state.get("sender_id", "")
-            if sender_id:
-                from .memory import save_perfil
-                perfil = (
-                    f"Nome: {nome} | Serviço: {servico} | Tel: {telefone} | "
-                    f"Email: {email} | Canal: {canal} | Detalhe: {qualificacao}"
-                )
-                save_perfil(sender_id, perfil)
-            tool_context.state["sessao_concluida"] = True
+            try:
+                sender_id = tool_context.state.get("sender_id", "")
+                if sender_id:
+                    from .memory import save_perfil
+                    perfil = (
+                        f"Nome: {nome} | Serviço: {servico} | Tel: {telefone} | "
+                        f"Email: {email} | Canal: {canal} | Detalhe: {qualificacao}"
+                    )
+                    save_perfil(sender_id, perfil)
+                tool_context.state["sessao_concluida"] = True
+            except Exception as mem_err:
+                logger.warning(f"Memória não guardada (não afecta o CRM): {mem_err}")
 
             return f"Lead registado com sucesso no CRM. ID: {crm_id}. Nome: {nome}. Serviço: {servico}."
         else:
