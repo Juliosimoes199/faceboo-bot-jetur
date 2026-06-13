@@ -167,7 +167,7 @@ def enviar_mensagem_instagram2(igsid: str, texto: str):
 
 def enviar_mensagem_instagram11(igsid: str, texto: str):
     """Envia mensagem via Instagram Business Messaging API com o Token e URL Corrigidos."""
-    token = "IGAAR1nZBZBTFatBZAFpPVWRMTUF0VFdIbEZAXYS1DQjk2aFdlVGVLWDgwc09YNUFkWHM2em5rbVQtYk5KOXBTZA0t6NmJmOVBaOEk5aVJZAS2hzbF9YUWNNZA0ZAqSjdrd19SZA1JxTmtXUERFaWFlcjBkOUJ6MGRKSURaclhCR1NoZAnJWTQZDZD"
+    token = "IGAAR1nZBZBTFatBZAGFTV2J1VGhTb0VaNnRuVW1SNEVPaWh5NnhrQkFaS2o2eFFjZAXBma1hvRjJFS3RlVG1XN0FMWFk2aGdldk52Y3ZA2SXRjNjJMNjRpdHVPVDVYOG52cnh1VVNydVg5NmJJVDJBNnR6cUF1Wk16djI4WTBxT3djVQZDZD"
     ig_id = "17841448397273178"
     
     # GARANTA QUE ESSA LINHA TENHA A BARRA APÓS O DOMÍNIO E A VERSÃO
