@@ -136,24 +136,75 @@ def webhook():
             print(f"Erro ao processar POST: {e}")
             return "Erro interno", 500
 
+def enviar_mensagem_instagram(igsid: str, texto: str):
+    """Envia mensagem de texto para um usuário do Instagram via Graph API."""
+    PAGE_ACCESS_TOKEN_INSTAGRAM = os.environ.get(
+        "PAGE_ACCESS_TOKEN_INSTAGRAM",
+        "IGAAR1nZBZBTFatBZAFlEQW1nOUlDUXkwNHRabU9nSkhRdXdvb25kNDgtLW16eUVRUlkwT09oQVBaOC1NbE05YXpDMl90Y1NsbU9aWkJlZAEFNdk9pX2Y0LVBuR19FMG42NzE3bFdpaGRhYkxzNmVRVWd1S1pLa3RJZAENCLUw4YnVRTQZDZD"
+    )
+    url = "https://graph.facebook.com/v21.0/me/messages"
+    payload = {
+        "recipient": {"id": igsid},
+        "messaging_type": "RESPONSE",
+        "message": {"text": texto},
+    }
+    try:
+        resp = requests.post(
+            url,
+            params={"access_token": PAGE_ACCESS_TOKEN_INSTAGRAM},
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        logger.info(f"Instagram send status={resp.status_code} body={resp.text}")
+        return resp.json()
+    except Exception as e:
+        logger.error(f"Erro ao enviar mensagem Instagram: {e}")
+        return None
+
+
 @app.route("/webhook/instagram", methods=["GET", "POST"])
 def instagram_webhook():
-    
     VERIFY_TOKEN = "instagramjetur2026"
-    
-    
-     # 1. TRATAMENTO PARA VALIDAÇÃO (GET)
+
+    # 1. VALIDAÇÃO DO WEBHOOK (GET)
     if request.method == "GET":
         mode = request.args.get("hub.mode")
         verify_token = request.args.get("hub.verify_token")
         challenge = request.args.get("hub.challenge")
-        
+
         if mode == "subscribe" and verify_token == VERIFY_TOKEN:
-            print("Webhook verificado com sucesso!")
+            logger.info("Instagram webhook verificado com sucesso.")
             return challenge, 200
-        else:
-            print("Falha na verificação do webhook.")
-            return "Token de verificação inválido", 403
+        logger.warning("Falha na verificação do Instagram webhook.")
+        return "Token de verificação inválido", 403
+
+    # 2. RECEBER MENSAGENS (POST)
+    if request.method == "POST":
+        try:
+            body = request.get_json()
+            logger.info(f"Instagram webhook payload: {body}")
+
+            # A Meta envia object="instagram" para eventos da plataforma Instagram
+            if body and body.get("object") in ("instagram", "page"):
+                for entry in body.get("entry", []):
+                    for event in entry.get("messaging", []):
+                        sender_igsid = event.get("sender", {}).get("id")
+
+                        # Ignora eco das próprias mensagens enviadas pelo bot
+                        msg = event.get("message", {})
+                        if msg.get("is_echo"):
+                            continue
+
+                        texto = msg.get("text")
+                        if sender_igsid and texto:
+                            logger.info(f"Instagram msg de {sender_igsid}: {texto}")
+                            resposta = _processar_e_responder("instagram", sender_igsid, texto)
+                            enviar_mensagem_instagram(sender_igsid, resposta)
+
+            return "EVENT_RECEIVED", 200
+        except Exception as e:
+            logger.error(f"Erro ao processar POST do Instagram: {e}")
+            return "Erro interno", 500
 
 
 if __name__ == "__main__":
