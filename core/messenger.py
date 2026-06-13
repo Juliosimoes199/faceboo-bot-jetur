@@ -14,9 +14,11 @@ WHATSAPP_PHONE_ID    = os.environ.get("WHATSAPP_PHONE_ID", "")
 
 def _post(url: str, payload: dict, token: str) -> bool:
     try:
+        # CORREÇÃO: Passando o token via string de consulta (params), exigido pela API da Meta
         resp = requests.post(
             url,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            params={"access_token": token},
+            headers={"Content-Type": "application/json"},
             json=payload,
             timeout=10,
         )
