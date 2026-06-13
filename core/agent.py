@@ -8,7 +8,7 @@ from .redis_session import RedisSessionService
 from google.adk.models.lite_llm import LiteLlm
 
 from google.genai import types
-from .tools import registrar_lead, notificar_equipa
+from .tools import registrar_lead, notificar_equipa, obter_data_atual
 
 logger = logging.getLogger(__name__)
 
@@ -291,7 +291,7 @@ def _criar_runner() -> Runner:
         name="JEturBot",
         model=llma_model,
         instruction=INSTRUCAO_JETUR,
-        tools=[registrar_lead, notificar_equipa],
+        tools=[registrar_lead, notificar_equipa, obter_data_atual],
     )
 
     return Runner(

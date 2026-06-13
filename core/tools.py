@@ -1,12 +1,34 @@
 import os
 import logging
 import requests
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from google.adk.tools import ToolContext
 
 logger = logging.getLogger(__name__)
 
 CRM_API_URL = os.environ.get("CRM_API_URL", "https://jetur-crm.vercel.app")
+_TZ = ZoneInfo("Africa/Luanda")
+
+
+def obter_data_atual() -> str:
+    """
+    Devolve a data e hora actual em Luanda (Angola, UTC+1).
+    Usa esta ferramenta sempre que precisares saber a data de hoje,
+    calcular 'amanhã', 'próximo mês', 'próxima semana', etc.
+
+    Returns:
+        String com data e hora actuais, dia da semana e mês por extenso.
+    """
+    agora = datetime.now(_TZ)
+    dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira",
+            "Sexta-feira", "Sábado", "Domingo"]
+    meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+             "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    return (
+        f"Hoje é {dias[agora.weekday()]}, {agora.day} de {meses[agora.month - 1]} de {agora.year}. "
+        f"Hora em Luanda: {agora.strftime('%H:%M')}."
+    )
 
 
 def registrar_lead(
