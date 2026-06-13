@@ -3,3 +3,4 @@ python-dotenv==1.0.1
 requests==2.32.3
 google-adk==1.2.1
 litellm>=1.63.11
+redis>=5.0.0

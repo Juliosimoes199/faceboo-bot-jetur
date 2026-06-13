@@ -4,6 +4,7 @@ import logging
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from .redis_session import RedisSessionService
 from google.adk.models.lite_llm import LiteLlm
 
 from google.genai import types
@@ -273,7 +274,13 @@ Frase-modelo: "Há destinos que costumam ser mais simples para passaporte angola
 """
 #llma_model = LiteLlm("anthropic/claude-haiku-4-5-20251001")
 llma_model = "gemini-2.5-flash"
-session_service = InMemorySessionService()
+
+_redis_url = os.environ.get("REDIS_URL")
+session_service = (
+    RedisSessionService(_redis_url)
+    if _redis_url
+    else InMemorySessionService()
+)
 
 _runner: Runner | None = None
 
