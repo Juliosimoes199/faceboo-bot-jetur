@@ -146,7 +146,7 @@ def enviar_mensagem_instagram2(igsid: str, texto: str):
         logger.error("PAGE_ACCESS_TOKEN_INSTAGRAM não configurado nas variáveis de ambiente.")
         return None
     # Endpoint da Instagram Business Messaging API — usa o ID da conta IG, não /me
-    url = f"https://graph.facebook.com/v21.0/{ig_id}/messages"
+    url = f"https://graph.instagram.com/v21.0/{ig_id}/messages"
     payload = {
         "recipient": {"id": igsid},
         "messaging_type": "RESPONSE",
@@ -228,8 +228,8 @@ def instagram_webhook():
                         texto = msg.get("text")
                         if sender_igsid and texto:
                             logger.info(f"Instagram msg de {sender_igsid}: {texto}")
-                            #_processar_e_responder("instagram", sender_igsid, texto)
-                            enviar_mensagem_instagram11(sender_igsid, f"Recebi sua mensagem: '{texto}'")
+                            _processar_e_responder("instagram", sender_igsid, texto)
+                            #enviar_mensagem_instagram11(sender_igsid, f"Recebi sua mensagem: '{texto}'")
 
             return "EVENT_RECEIVED", 200
         except Exception as e:
