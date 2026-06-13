@@ -165,13 +165,12 @@ def enviar_mensagem_instagram2(igsid: str, texto: str):
         logger.error(f"Erro ao enviar mensagem Instagram: {e}")
         return None
 
-def enviar_mensagem_instagram(igsid: str, texto: str):
+def enviar_mensagem_instagram11(igsid: str, texto: str):
     """Envia mensagem via Instagram Business Messaging API com o Token e URL Corrigidos."""
     token = "IGAAR1nZBZBTFatBZAFpPVWRMTUF0VFdIbEZAXYS1DQjk2aFdlVGVLWDgwc09YNUFkWHM2em5rbVQtYk5KOXBTZA0t6NmJmOVBaOEk5aVJZAS2hzbF9YUWNNZA0ZAqSjdrd19SZA1JxTmtXUERFaWFlcjBkOUJ6MGRKSURaclhCR1NoZAnJWTQZDZD"
+    ig_id = "17841448397273178"
     
-    ig_id = "17841448397273178"  # ID correto da conta level_776
-    
-    # URL CORRIGIDA: Inclui o subdomínio graph, a versão v21.0 e as barras corretas
+    # GARANTA QUE ESSA LINHA TENHA A BARRA APÓS O DOMÍNIO E A VERSÃO
     url = f"https://graph.facebook.com/v21.0/{ig_id}/messages"
     
     payload = {
@@ -191,7 +190,6 @@ def enviar_mensagem_instagram(igsid: str, texto: str):
     except Exception as e:
         logger.error(f"Erro ao enviar mensagem Instagram: {e}")
         return None
-
 
 
 @app.route("/webhook/instagram", methods=["GET", "POST"])
@@ -231,7 +229,7 @@ def instagram_webhook():
                         if sender_igsid and texto:
                             logger.info(f"Instagram msg de {sender_igsid}: {texto}")
                             #_processar_e_responder("instagram", sender_igsid, texto)
-                            enviar_mensagem_instagram(sender_igsid, f"Recebi sua mensagem: '{texto}'")
+                            enviar_mensagem_instagram11(sender_igsid, f"Recebi sua mensagem: '{texto}'")
 
             return "EVENT_RECEIVED", 200
         except Exception as e:
