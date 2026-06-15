@@ -92,6 +92,9 @@ def registrar_lead(
     Returns:
         Confirmação com o ID do lead registado no CRM.
     """
+    if tool_context.state.get("lead_registrado"):
+        return f"Lead já registado nesta sessão. Não repetir."
+
     # Usa o canal da sessão (origem real do webhook) em vez do que o LLM preenche
     canal_real = tool_context.state.get("canal") or canal
 
@@ -129,6 +132,7 @@ def registrar_lead(
             except Exception as mem_err:
                 logger.warning(f"Memória não guardada (não afecta o CRM): {mem_err}")
 
+            tool_context.state["lead_registrado"] = True
             enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
             return f"Lead registado com sucesso no CRM. ID: {crm_id}. Nome: {nome}. Serviço: {servico}."
         else:
@@ -155,6 +159,9 @@ def notificar_equipa(nome: str, email: str, telefone: str, servico: str, qualifi
     Returns:
         Confirmação de que a equipa foi notificada.
     """
-    # Implementar lógica de envio de email ou mensagem interna aqui
+    if tool_context.state.get("equipa_notificada"):
+        return "Equipa já notificada nesta sessão. Não repetir."
+
     enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
+    tool_context.state["equipa_notificada"] = True
     return f"Equipa de vendas notificada sobre novo lead: {nome}, Serviço: {servico}."
