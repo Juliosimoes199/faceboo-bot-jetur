@@ -2,6 +2,7 @@ import os
 import logging
 import urllib.request
 import requests
+import redis as redis_lib
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 from google.adk.tools import ToolContext
@@ -10,6 +11,16 @@ logger = logging.getLogger(__name__)
 
 CRM_API_URL = os.environ.get("CRM_API_URL", "https://jetur-crm.vercel.app")
 _TZ = ZoneInfo("Africa/Luanda")
+
+_REDIS_URL = os.environ.get("REDIS_URL")
+_redis = redis_lib.from_url(_REDIS_URL, decode_responses=True, socket_timeout=5) if _REDIS_URL else None
+
+
+def _adquirir_lock(chave: str, ttl_segundos: int = 86400) -> bool:
+    """Retorna True se o lock foi adquirido (primeira vez). False se já existe."""
+    if _redis is None:
+        return True  # sem Redis, permite sempre (fallback)
+    return bool(_redis.set(chave, "1", nx=True, ex=ttl_segundos))
 
 
 def enviar_notificacao_ntfy(nome: str,
@@ -92,8 +103,11 @@ def registrar_lead(
     Returns:
         Confirmação com o ID do lead registado no CRM.
     """
-    if tool_context.state.get("lead_registrado"):
-        return f"Lead já registado nesta sessão. Não repetir."
+    _sender = tool_context.state.get("sender_id", "")
+    _canal_lock = tool_context.state.get("canal", "")
+    _lock_key = f"jetur:lead_registrado:{_canal_lock}:{_sender}"
+    if not _adquirir_lock(_lock_key):
+        return "Lead já registado nesta sessão. Não repetir."
 
     # Usa o canal da sessão (origem real do webhook) em vez do que o LLM preenche
     canal_real = tool_context.state.get("canal") or canal
@@ -132,7 +146,6 @@ def registrar_lead(
             except Exception as mem_err:
                 logger.warning(f"Memória não guardada (não afecta o CRM): {mem_err}")
 
-            tool_context.state["lead_registrado"] = True
             enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
             return f"Lead registado com sucesso no CRM. ID: {crm_id}. Nome: {nome}. Serviço: {servico}."
         else:
@@ -159,9 +172,11 @@ def notificar_equipa(nome: str, email: str, telefone: str, servico: str, qualifi
     Returns:
         Confirmação de que a equipa foi notificada.
     """
-    if tool_context.state.get("equipa_notificada"):
+    _sender = tool_context.state.get("sender_id", "")
+    _canal_lock = tool_context.state.get("canal", "")
+    _lock_key = f"jetur:equipa_notificada:{_canal_lock}:{_sender}"
+    if not _adquirir_lock(_lock_key):
         return "Equipa já notificada nesta sessão. Não repetir."
 
     enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
-    tool_context.state["equipa_notificada"] = True
     return f"Equipa de vendas notificada sobre novo lead: {nome}, Serviço: {servico}."
