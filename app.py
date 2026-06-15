@@ -15,6 +15,19 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Deduplicação de mensagens: evita processar o mesmo mid duas vezes quando
+# o Vercel acorda e a Meta já reenviou o webhook.
+_processed_mids: set[str] = set()
+_MAX_MIDS = 500  # limite simples para não crescer indefinidamente
+
+def _is_duplicate(mid: str) -> bool:
+    if mid in _processed_mids:
+        return True
+    if len(_processed_mids) >= _MAX_MIDS:
+        _processed_mids.clear()
+    _processed_mids.add(mid)
+    return False
+
 
 
 VERIFY_TOKEN_META = os.environ.get("VERIFY_TOKEN_META", "jetur_verify_2024")
@@ -122,17 +135,16 @@ def webhook():
                         print(f"ID do Remetente (PSID): {sender_id}")
                         
                         if "message" in messaging_event:
-                            message_text = messaging_event["message"].get("text")
+                            msg = messaging_event["message"]
+                            mid = msg.get("mid", "")
+                            if mid and _is_duplicate(mid):
+                                logger.info(f"[facebook] mid duplicado ignorado: {mid}")
+                                continue
+                            message_text = msg.get("text")
                             print(f"Texto da Mensagem: {message_text}")
-                            
-                            # --- RESPOSTA AUTOMÁTICA AQUI ---
-                            # Criamos o texto que queremos devolver
+
                             message_text = f"{message_text} \ncanal de contato: *facebook*"
-                            texto_resposta = _processar_e_responder("facebook", sender_id, message_text)
-                            #texto_resposta = f"Olá! Recebi a sua mensagem: '{message_text}'."
-                            
-                            # Executa o envio
-                            enviar_mensagem_facebook(sender_id, texto_resposta)
+                            _processar_e_responder("facebook", sender_id, message_text)
             
             return "EVENT_RECEIVED", 200
         except Exception as e:
@@ -226,12 +238,16 @@ def instagram_webhook():
                         if msg.get("is_echo"):
                             continue
 
+                        mid = msg.get("mid", "")
+                        if mid and _is_duplicate(mid):
+                            logger.info(f"[instagram] mid duplicado ignorado: {mid}")
+                            continue
+
                         texto = msg.get("text")
                         texto = f"{texto} \ncanal de contato: *instagram*"
                         if sender_igsid and texto:
                             logger.info(f"Instagram msg de {sender_igsid}: {texto}")
                             _processar_e_responder("instagram", sender_igsid, texto)
-                            #enviar_mensagem_instagram11(sender_igsid, f"Recebi sua mensagem: '{texto}'")
 
             return "EVENT_RECEIVED", 200
         except Exception as e:

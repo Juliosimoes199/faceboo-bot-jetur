@@ -78,6 +78,9 @@ def registrar_lead(
     canal: str,
     tool_context: ToolContext,
 ) -> str:
+    if tool_context.state.get("lead_registrado"):
+        return f"Lead já registado nesta sessão. Nome: {nome}. Serviço: {servico}."
+
     """
     Regista um lead qualificado no CRM JEtur via API.
 
@@ -129,6 +132,7 @@ def registrar_lead(
             except Exception as mem_err:
                 logger.warning(f"Memória não guardada (não afecta o CRM): {mem_err}")
 
+            tool_context.state["lead_registrado"] = True
             enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
             return f"Lead registado com sucesso no CRM. ID: {crm_id}. Nome: {nome}. Serviço: {servico}."
         else:
@@ -138,3 +142,23 @@ def registrar_lead(
     except Exception as e:
         logger.error(f"Excepção ao registar lead no CRM: {e}")
         return f"Erro ao registar lead: {str(e)}"
+
+def notificar_equipa(nome: str, email: str, telefone: str, servico: str, qualificacao: str, canal: str, tool_context: ToolContext) -> str:
+    """
+    NOTIFICA A EQUIPA DE VENDAS via email ou outro canal interno.
+    (Esta função é um placeholder e deve ser implementada com o método de notificação escolhido.)
+
+    Args:
+        nome: Nome do lead.
+        email: Email do lead.
+        telefone: Telefone do lead.
+        servico: Serviço de interesse.
+        qualificacao: Detalhes da qualificação.
+        canal: Canal de origem.
+
+    Returns:
+        Confirmação de que a equipa foi notificada.
+    """
+    # Implementar lógica de envio de email ou mensagem interna aqui
+    enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
+    return f"Equipa de vendas notificada sobre novo lead: {nome}, Serviço: {servico}."
