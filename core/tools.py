@@ -78,9 +78,6 @@ def registrar_lead(
     canal: str,
     tool_context: ToolContext,
 ) -> str:
-    if tool_context.state.get("lead_registrado"):
-        return f"Lead já registado nesta sessão. Nome: {nome}. Serviço: {servico}."
-
     """
     Regista um lead qualificado no CRM JEtur via API.
 
@@ -132,7 +129,6 @@ def registrar_lead(
             except Exception as mem_err:
                 logger.warning(f"Memória não guardada (não afecta o CRM): {mem_err}")
 
-            tool_context.state["lead_registrado"] = True
             enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
             return f"Lead registado com sucesso no CRM. ID: {crm_id}. Nome: {nome}. Serviço: {servico}."
         else:
