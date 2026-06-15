@@ -20,7 +20,11 @@ def _adquirir_lock(chave: str, ttl_segundos: int = 86400) -> bool:
     """Retorna True se o lock foi adquirido (primeira vez). False se já existe."""
     if _redis is None:
         return True  # sem Redis, permite sempre (fallback)
-    return bool(_redis.set(chave, "1", nx=True, ex=ttl_segundos))
+    try:
+        return bool(_redis.set(chave, "1", nx=True, ex=ttl_segundos))
+    except Exception as e:
+        logger.error(f"Redis lock error ({chave}): {e}")
+        return False  # em caso de falha Redis, bloqueia para evitar duplicados
 
 
 def enviar_notificacao_ntfy(nome: str,
@@ -146,7 +150,9 @@ def registrar_lead(
             except Exception as mem_err:
                 logger.warning(f"Memória não guardada (não afecta o CRM): {mem_err}")
 
-            enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
+            _notif_key = f"jetur:notificacao_enviada:{_canal_lock}:{_sender}"
+            if _adquirir_lock(_notif_key):
+                enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
             return f"Lead registado com sucesso no CRM. ID: {crm_id}. Nome: {nome}. Serviço: {servico}."
         else:
             erro = resp.json().get("erro", resp.text)
@@ -174,8 +180,8 @@ def notificar_equipa(nome: str, email: str, telefone: str, servico: str, qualifi
     """
     _sender = tool_context.state.get("sender_id", "")
     _canal_lock = tool_context.state.get("canal", "")
-    _lock_key = f"jetur:equipa_notificada:{_canal_lock}:{_sender}"
-    if not _adquirir_lock(_lock_key):
+    _notif_key = f"jetur:notificacao_enviada:{_canal_lock}:{_sender}"
+    if not _adquirir_lock(_notif_key):
         return "Equipa já notificada nesta sessão. Não repetir."
 
     enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
