@@ -1,5 +1,6 @@
 import os
 import logging
+import urllib.request
 import requests
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
@@ -9,6 +10,43 @@ logger = logging.getLogger(__name__)
 
 CRM_API_URL = os.environ.get("CRM_API_URL", "https://jetur-crm.vercel.app")
 _TZ = ZoneInfo("Africa/Luanda")
+
+
+def enviar_notificacao_ntfy(nome: str,
+    servico: str,
+    qualificacao: str,
+    telefone: str,
+    email: str,
+    canal: str,
+    tool_context: ToolContext) -> str:
+    TOPICO = "teste_judy_jetur" 
+    URL = f"https://ntfy.sh/{TOPICO}"
+
+    # Mensagem que será exibida no celular
+    MENSAGEM = f"Novo lead registado: {nome} | Serviço: {servico} | Detalhes: {qualificacao} | Tel: {telefone} | Email: {email} | Canal: {canal}"
+
+    # CORREÇÃO: Removido o .encode() dos cabeçalhos e padronizados os nomes das chaves
+    headers = {
+        "Title": "Alerta de Vendas",
+        "Priority": "default",       
+        "Sound": "cashregister",  # Chave oficial aceita pelo servidor ntfy
+        "Tags": "moneybag,fire"   
+    }
+
+    # Prepara a requisição (Apenas a MENSAGEM deve ser transformada em bytes usando .encode)
+    req = urllib.request.Request(
+        URL, 
+        data=MENSAGEM.encode('utf-8'), 
+        headers=headers, 
+        method='POST'
+    )
+
+    try:
+        with urllib.request.urlopen(req) as response:
+            print(f"Sucesso! Código de resposta: {response.getcode()}")
+            print(f"Monitore as mensagens em: https://ntfy.sh/{TOPICO}")
+    except Exception as e:
+        print(f"Ocorreu um erro ao enviar: {e}")
 
 
 def obter_data_atual() -> str:
@@ -91,6 +129,7 @@ def registrar_lead(
             except Exception as mem_err:
                 logger.warning(f"Memória não guardada (não afecta o CRM): {mem_err}")
 
+            enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
             return f"Lead registado com sucesso no CRM. ID: {crm_id}. Nome: {nome}. Serviço: {servico}."
         else:
             erro = resp.json().get("erro", resp.text)
@@ -99,29 +138,3 @@ def registrar_lead(
     except Exception as e:
         logger.error(f"Excepção ao registar lead no CRM: {e}")
         return f"Erro ao registar lead: {str(e)}"
-
-
-def notificar_equipa(
-    nome: str,
-    servico: str,
-    qualificacao: str,
-    telefone: str,
-    email: str,
-    canal: str,
-) -> str:
-    """
-    Notificação à equipa de vendas — desactivada de momento.
-
-    Args:
-        nome: Nome do lead.
-        servico: Serviço de interesse.
-        qualificacao: Detalhes da qualificação.
-        telefone: Contacto telefónico.
-        email: Endereço de e-mail.
-        canal: Canal de origem.
-
-    Returns:
-        Confirmação (notificações pausadas).
-    """
-    logger.info(f"notificar_equipa chamada (pausada): nome={nome} servico={servico} canal={canal}")
-    return "Notificação à equipa registada."

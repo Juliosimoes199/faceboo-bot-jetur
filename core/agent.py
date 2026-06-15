@@ -8,7 +8,7 @@ from .redis_session import RedisSessionService
 from google.adk.models.lite_llm import LiteLlm
 
 from google.genai import types
-from .tools import registrar_lead, notificar_equipa, obter_data_atual
+from .tools import registrar_lead, obter_data_atual, enviar_notificacao_ntfy
 
 logger = logging.getLogger(__name__)
 
@@ -190,12 +190,11 @@ Assim podemos enviar-te a proposta por escrito com todos os detalhes."
 Após receber o e-mail, OBRIGATORIAMENTE:
 
 1. Chamas a ferramenta 'registrar_lead' com todos os dados recolhidos.
-2. Chamas a ferramenta 'notificar_equipa' com os mesmos dados (sem lead_id).
-3. Envias a mensagem de confirmação:
+2. Envias a mensagem de confirmação:
 
 "Tudo certo, [Nome]! Já tenho o que preciso.
 
-Resumindo o que me contaste:
+Resumindo o que me Informaste:
 → Serviço: [serviço indicado]
 → Contexto: [ocasião/grupo/data mencionados]
 → Tel.: [telefone] | Email: [email]
@@ -291,7 +290,7 @@ def _criar_runner() -> Runner:
         name="JEturBot",
         model=llma_model,
         instruction=INSTRUCAO_JETUR,
-        tools=[registrar_lead, notificar_equipa, obter_data_atual],
+        tools=[registrar_lead, obter_data_atual],
     )
 
     return Runner(
