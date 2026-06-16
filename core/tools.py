@@ -16,7 +16,7 @@ _REDIS_URL = os.environ.get("REDIS_URL")
 _redis = redis_lib.from_url(_REDIS_URL, decode_responses=True, socket_timeout=5) if _REDIS_URL else None
 
 
-def _adquirir_lock(chave: str, ttl_segundos: int = 120) -> bool:
+def _adquirir_lock(chave: str, ttl_segundos: int = 80) -> bool:
     """Retorna True se o lock foi adquirido (primeira vez). False se já existe."""
     if _redis is None:
         return True  # sem Redis, permite sempre (fallback)
