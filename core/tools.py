@@ -34,7 +34,7 @@ def enviar_notificacao_ntfy(nome: str,
     email: str,
     canal: str,
     tool_context: ToolContext) -> str:
-    TOPICO = "teste_judy_jetur" 
+    TOPICO = "teste_jetur_viagens" 
     URL = f"https://ntfy.sh/{TOPICO}"
 
     # Mensagem que será exibida no celular
