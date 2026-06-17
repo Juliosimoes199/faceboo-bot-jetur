@@ -8,6 +8,7 @@ import logging
 from flask import Flask, request, jsonify
 from core.agent import processar_mensagem, session_service
 from core.messenger import enviar_mensagem
+from core.tools import _adquirir_lock
 import requests
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -123,7 +124,14 @@ def webhook():
                         print(f"ID do Remetente (PSID): {sender_id}")
                         
                         if "message" in messaging_event:
-                            message_text = messaging_event["message"].get("text")
+                            msg = messaging_event["message"]
+                            if msg.get("is_echo"):
+                                continue
+                            mid = msg.get("mid", "")
+                            if mid and not _adquirir_lock(f"webhook:fb:{mid}", 120):
+                                logger.info(f"Webhook FB duplicado ignorado: {mid}")
+                                continue
+                            message_text = msg.get("text")
                             print(f"Texto da Mensagem: {message_text}")
 
                             message_text = f"{message_text} \ncanal de contato: *facebook*"
@@ -219,6 +227,11 @@ def instagram_webhook():
                         # Ignora eco das próprias mensagens enviadas pelo bot
                         msg = event.get("message", {})
                         if msg.get("is_echo"):
+                            continue
+
+                        mid = msg.get("mid", "")
+                        if mid and not _adquirir_lock(f"webhook:ig:{mid}", 120):
+                            logger.info(f"Webhook IG duplicado ignorado: {mid}")
                             continue
 
                         texto = msg.get("text")

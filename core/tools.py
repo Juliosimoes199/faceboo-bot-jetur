@@ -57,11 +57,10 @@ def enviar_notificacao_ntfy(nome: str,
     )
 
     try:
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=5) as response:
             print(f"Sucesso! Código de resposta: {response.getcode()}")
-            print(f"Monitore as mensagens em: https://ntfy.sh/{TOPICO}")
     except Exception as e:
-        print(f"Ocorreu um erro ao enviar: {e}")
+        print(f"Ocorreu um erro ao enviar ntfy: {e}")
 
 
 def obter_data_atual() -> str:
@@ -131,7 +130,7 @@ def registrar_lead(
         resp = requests.post(
             f"{CRM_API_URL}/api/clientes",
             json=payload,
-            timeout=15,
+            timeout=7,
         )
         if resp.status_code == 201:
             crm_id = resp.json().get("id", "—")
