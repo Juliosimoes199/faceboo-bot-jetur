@@ -223,15 +223,27 @@ def instagram_webhook():
                 for entry in body.get("entry", []):
 
                     # ── Comentários em publicações ────────────────────────────
+                    PALAVRAS_CHAVE_IG = {"jetur"}
+                    MENSAGEM_BOAS_VINDAS = (
+                        "Olá! Bem-vindo(a) à JEtur. Somos a tua agência de viagens em Luanda. "
+                        "Cuidamos de tudo para que a tua próxima experiência seja exactamente "
+                        "como imaginas, sem preocupações.\n\n"
+                        "Antes de mais, com quem tenho o prazer de falar?"
+                    )
+
                     for change in entry.get("changes", []):
                         if change.get("field") != "comments":
                             continue
                         value = change.get("value", {})
                         commenter_id = value.get("from", {}).get("id")
-                        comment_text = value.get("text", "")
+                        comment_text = value.get("text", "").strip()
                         comment_id   = value.get("id", "")
 
                         if not commenter_id or not comment_text:
+                            continue
+
+                        # Só actua se o comentário for exactamente a palavra-chave
+                        if comment_text.lower() not in PALAVRAS_CHAVE_IG:
                             continue
 
                         # Deduplicar por comment_id
@@ -239,9 +251,10 @@ def instagram_webhook():
                             logger.info(f"Comentário IG duplicado ignorado: {comment_id}")
                             continue
 
-                        logger.info(f"Comentário IG de {commenter_id}: {comment_text}")
-                        texto_com_canal = f"{comment_text} \ncanal de contato: *instagram*"
-                        _processar_e_responder("instagram", commenter_id, texto_com_canal)
+                        logger.info(f"Comentário-chave IG de {commenter_id}: {comment_text}")
+                        enviado = enviar_mensagem("instagram", commenter_id, MENSAGEM_BOAS_VINDAS)
+                        if not enviado:
+                            logger.warning(f"Falha ao enviar boas-vindas IG para {commenter_id}")
 
                     # ── Mensagens directas (DMs) ──────────────────────────────
                     for event in entry.get("messaging", []):
