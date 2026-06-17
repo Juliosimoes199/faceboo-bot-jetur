@@ -221,6 +221,29 @@ def instagram_webhook():
             # A Meta envia object="instagram" para eventos da plataforma Instagram
             if body and body.get("object") in ("instagram", "page"):
                 for entry in body.get("entry", []):
+
+                    # ── Comentários em publicações ────────────────────────────
+                    for change in entry.get("changes", []):
+                        if change.get("field") != "comments":
+                            continue
+                        value = change.get("value", {})
+                        commenter_id = value.get("from", {}).get("id")
+                        comment_text = value.get("text", "")
+                        comment_id   = value.get("id", "")
+
+                        if not commenter_id or not comment_text:
+                            continue
+
+                        # Deduplicar por comment_id
+                        if comment_id and not _adquirir_lock(f"webhook:ig:comment:{comment_id}", 120):
+                            logger.info(f"Comentário IG duplicado ignorado: {comment_id}")
+                            continue
+
+                        logger.info(f"Comentário IG de {commenter_id}: {comment_text}")
+                        texto_com_canal = f"{comment_text} \ncanal de contato: *instagram*"
+                        _processar_e_responder("instagram", commenter_id, texto_com_canal)
+
+                    # ── Mensagens directas (DMs) ──────────────────────────────
                     for event in entry.get("messaging", []):
                         sender_igsid = event.get("sender", {}).get("id")
 
