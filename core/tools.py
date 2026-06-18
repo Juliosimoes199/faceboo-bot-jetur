@@ -185,3 +185,7 @@ def notificar_equipa(nome: str, email: str, telefone: str, servico: str, qualifi
 
     enviar_notificacao_ntfy(nome, servico, qualificacao, telefone, email, canal, tool_context)
     return f"Equipa de vendas notificada sobre novo lead: {nome}, Serviço: {servico}."
+
+
+
+

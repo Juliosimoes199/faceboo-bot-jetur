@@ -339,6 +339,48 @@ def listar_sessoes(sender_id):
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
+
+ACCESS_TOKEN_WHATSAPP = "1234"
+def enviar_texto_livre(destinatario, texto):
+    url = f"https://graph.facebook.com/{VERSION}/{PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN_WHATSAPP}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": destinatario,
+        "type": "text",
+        "text": { "body": texto }
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        print(f"Resposta da Meta: {response.json()}")
+    except Exception as e:
+        print(f"Erro ao enviar para Meta: {e}")
+
+
+
+@app.route('/whatsapp', methods=['POST'])
+def receive_zap_hook():
+    data = request.get_json()
+    if not data:
+        return jsonify({"status": "no_data"}), 200
+
+    numero_cliente = data.get('numero')
+    texto_recebido = data.get('mensagem', '').strip().lower()
+
+    # REMOVEMOS O THREADING
+    # No Vercel, precisamos executar a função direto antes do return
+    if numero_cliente:
+        print(f"Enviando resposta para {numero_cliente}...")
+        enviar_texto_livre(numero_cliente, "Olá! Recebemos o seu contato. Em que podemos ajudar?")
+
+    # O retorno acontece LOGO APÓS o envio para a Meta
+    return jsonify({"status": "received"}), 200
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
