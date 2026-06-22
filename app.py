@@ -362,8 +362,24 @@ def enviar_texto_livre(destinatario, texto):
 
 
 
-@app.route('/whatsapp', methods=['POST'])
+@app.route('/whatsapp', methods=['POST', 'GET'])
 def receive_zap_hook():
+    
+    VERIFY_TOKEN = "jeturviagens"
+
+    # 1. VALIDAÇÃO DO WEBHOOK (GET)
+    if request.method == "GET":
+        mode = request.args.get("hub.mode")
+        verify_token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
+
+        if mode == "subscribe" and verify_token == VERIFY_TOKEN:
+            logger.info("Whatsapp webhook verificado com sucesso.")
+            return challenge, 200
+        logger.warning("Falha na verificação do Whatsapp webhook.")
+        return "Token de verificação inválido", 403
+    
+    
     data = request.get_json()
     if not data:
         return jsonify({"status": "no_data"}), 200
