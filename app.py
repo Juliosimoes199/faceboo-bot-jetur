@@ -22,6 +22,32 @@ app = Flask(__name__)
 VERIFY_TOKEN_META = os.environ.get("VERIFY_TOKEN_META", "jetur_verify_2024")
 VERIFY_TOKEN_WA   = os.environ.get("VERIFY_TOKEN_WA", "jetur_verify_2024")
 
+VERSION        = os.environ.get("META_API_VERSION", "v21.0").strip().replace("/", "")
+PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_ID", "").strip()
+ACCESS_TOKEN_WHATSAPP = os.environ.get("WHATSAPP_TOKEN", "1234").strip()
+
+
+def enviar_texto_livre(destinatario, texto):
+    url = f"https://graph.facebook.com/{VERSION}/{PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN_WHATSAPP}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": destinatario,
+        "type": "text",
+        "text": {"body": texto}
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        logger.info(f"WhatsApp Meta response: {response.json()}")
+        return response.status_code in (200, 201)
+    except Exception as e:
+        logger.error(f"Erro ao enviar para Meta (WhatsApp): {e}")
+        return False
+
 # Loop assíncrono persistente em thread dedicada — evita destruição de contexto entre pedidos
 _loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
 threading.Thread(target=_loop.run_forever, daemon=True).start()
@@ -340,31 +366,8 @@ def listar_sessoes(sender_id):
         return jsonify({"erro": str(e)}), 500
 
 
-ACCESS_TOKEN_WHATSAPP = "1234"
-def enviar_texto_livre(destinatario, texto):
-    url = f"https://graph.facebook.com/{VERSION}/{PHONE_NUMBER_ID}/messages"
-    headers = {
-        "Authorization": f"Bearer {ACCESS_TOKEN_WHATSAPP}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": destinatario,
-        "type": "text",
-        "text": { "body": texto }
-    }
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        print(f"Resposta da Meta: {response.json()}")
-    except Exception as e:
-        print(f"Erro ao enviar para Meta: {e}")
-
-
-
 @app.route('/whatsapp', methods=['POST', 'GET'])
 def receive_zap_hook():
-    
     VERIFY_TOKEN = "jeturviagens"
 
     # 1. VALIDAÇÃO DO WEBHOOK (GET)
@@ -378,23 +381,45 @@ def receive_zap_hook():
             return challenge, 200
         logger.warning("Falha na verificação do Whatsapp webhook.")
         return "Token de verificação inválido", 403
-    
-    
-    data = request.get_json()
-    if not data:
-        return jsonify({"status": "no_data"}), 200
 
-    numero_cliente = data.get('numero')
-    texto_recebido = data.get('mensagem', '').strip().lower()
+    # 2. RECEBER MENSAGENS (POST) — formato padrão Meta WhatsApp Cloud API
+    try:
+        body = request.get_json()
+        if not body:
+            return jsonify({"status": "no_data"}), 200
 
-    # REMOVEMOS O THREADING
-    # No Vercel, precisamos executar a função direto antes do return
-    if numero_cliente:
-        print(f"Enviando resposta para {numero_cliente}...")
-        enviar_texto_livre(numero_cliente, "Olá! Recebemos o seu contato. Em que podemos ajudar?")
+        if body.get("object") == "whatsapp_business_account":
+            for entry in body.get("entry", []):
+                for change in entry.get("changes", []):
+                    value = change.get("value", {})
 
-    # O retorno acontece LOGO APÓS o envio para a Meta
-    return jsonify({"status": "received"}), 200
+                    # Ignora status de entrega (delivered, read, sent)
+                    if "statuses" in value and "messages" not in value:
+                        continue
+
+                    for msg in value.get("messages", []):
+                        if msg.get("type") != "text":
+                            continue
+
+                        numero = msg.get("from")
+                        mid = msg.get("id", "")
+                        texto = msg.get("text", {}).get("body", "").strip()
+
+                        if not numero or not texto:
+                            continue
+
+                        if mid and not _adquirir_lock(f"webhook:wa:{mid}", 120):
+                            logger.info(f"Webhook WA duplicado ignorado: {mid}")
+                            continue
+
+                        logger.info(f"WhatsApp msg de {numero}: {texto}")
+                        texto_com_canal = f"{texto} \ncanal de contato: *whatsapp*"
+                        _processar_e_responder("whatsapp", numero, texto_com_canal)
+
+        return "EVENT_RECEIVED", 200
+    except Exception as e:
+        logger.error(f"Erro ao processar POST do WhatsApp: {e}")
+        return "Erro interno", 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────
