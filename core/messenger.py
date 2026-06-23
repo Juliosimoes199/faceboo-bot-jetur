@@ -8,11 +8,11 @@ logger = logging.getLogger(__name__)
 META_PAGE_TOKEN       = os.environ.get("META_PAGE_TOKEN", "").strip()
 META_IG_TOKEN         = (os.environ.get("META_IG_TOKEN") or os.environ.get("PAGE_ACCESS_TOKEN_INSTAGRAM", "")).strip()
 INSTAGRAM_BUSINESS_ID = os.environ.get("INSTAGRAM_BUSINESS_ID", "17841448397273178").strip()
-WHATSAPP_TOKEN        = os.environ.get("WHATSAPP_TOKEN", "").strip()
-WHATSAPP_PHONE_ID     = os.environ.get("WHATSAPP_PHONE_ID", "").strip()
-
-# Garante que a versão tenha um valor padrão consistente e limpo (sem barras nas pontas)
 META_API_VERSION      = os.environ.get("META_API_VERSION", "v21.0").strip().replace("/", "")
+
+# YCloud — WhatsApp
+YCLOUD_API_KEY        = os.environ.get("YCLOUD_API_KEY", "").strip()
+YCLOUD_WHATSAPP_ID    = os.environ.get("YCLOUD_WHATSAPP_ID", "").strip()
 
 def _post(url: str, payload: dict, token: str) -> bool:
     try:
@@ -58,17 +58,33 @@ def enviar_instagram(recipient_id: str, texto: str) -> bool:
 
 
 def enviar_whatsapp(recipient_phone: str, texto: str) -> bool:
-    if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
-        logger.info(f"[whatsapp] (sem token) → {recipient_phone}: {texto[:80]}")
+    if not YCLOUD_API_KEY or not YCLOUD_WHATSAPP_ID:
+        logger.info(f"[whatsapp] (sem credenciais YCloud) → {recipient_phone}: {texto[:80]}")
         return True
-    
-    url = f"https://graph.facebook.com/{META_API_VERSION}/{WHATSAPP_PHONE_ID}/messages"
-    return _post(url, {
-        "messaging_product": "whatsapp",
-        "to": recipient_phone,
-        "type": "text",
-        "text": {"body": texto},
-    }, WHATSAPP_TOKEN)
+
+    url = "https://api.ycloud.com/v2/whatsapp/messages/sendDirectly"
+    try:
+        resp = requests.post(
+            url,
+            headers={
+                "X-API-Key": YCLOUD_API_KEY,
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": YCLOUD_WHATSAPP_ID,
+                "to": recipient_phone,
+                "type": "text",
+                "text": {"body": texto},
+            },
+            timeout=10,
+        )
+        if resp.status_code not in (200, 201):
+            logger.error(f"YCloud WhatsApp error {resp.status_code}: {resp.text[:200]}")
+            return False
+        return True
+    except Exception as e:
+        logger.error(f"YCloud WhatsApp exception: {e}")
+        return False
 
 
 def enviar_mensagem(canal: str, recipient_id: str, texto: str) -> bool:
