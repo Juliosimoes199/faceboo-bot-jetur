@@ -413,6 +413,11 @@ def receive_zap_hook():
                             continue
 
                         logger.info(f"WhatsApp msg de {numero}: {texto}")
+                        # TESTE — resposta fixa sem LLM (remover quando confirmar que chega)
+                        from core.messenger import enviar_mensagem
+                        enviar_mensagem("whatsapp", numero, "✅ Teste YCloud: mensagem recebida com sucesso!")
+                        continue
+                        # FIM TESTE
                         texto_com_canal = f"{texto} \ncanal de contato: *whatsapp*"
                         _processar_e_responder("whatsapp", numero, texto_com_canal)
 
