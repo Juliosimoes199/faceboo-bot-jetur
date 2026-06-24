@@ -64,6 +64,8 @@ def _session_id(canal: str, sender_id: str) -> str:
 def _processar_e_responder(canal: str, sender_id: str, texto: str) -> str:
     session_id = _session_id(canal, sender_id)
     resposta = _run(processar_mensagem(session_id, sender_id, texto, canal))
+    if not resposta:
+        return ""
     enviado = enviar_mensagem(canal, sender_id, resposta)
     if not enviado:
         logger.warning(f"Resposta não enviada ao canal {canal} / {sender_id}")
@@ -301,7 +303,6 @@ def instagram_webhook():
                         if sender_igsid and texto:
                             logger.info(f"Instagram msg de {sender_igsid}: {texto}")
                             _processar_e_responder("instagram", sender_igsid, texto)
-                            #enviar_mensagem_instagram11(sender_igsid, f"Recebi sua mensagem: '{texto}'")
 
             return "EVENT_RECEIVED", 200
         except Exception as e:
@@ -382,18 +383,34 @@ def receive_zap_hook():
         logger.warning("Falha na verificação do Whatsapp webhook.")
         return "Token de verificação inválido", 403
 
-    # 2. RECEBER MENSAGENS (POST) — formato padrão Meta WhatsApp Cloud API
+    # 2. RECEBER MENSAGENS (POST)
     try:
         body = request.get_json()
         if not body:
             return jsonify({"status": "no_data"}), 200
 
-        if body.get("object") == "whatsapp_business_account":
+        # ── Formato YCloud ────────────────────────────────────────────────────
+        if body.get("type") == "whatsapp.inbound_message.received":
+            msg = body.get("whatsappInboundMessage", {})
+            if msg.get("type") == "text":
+                numero = msg.get("from", "")
+                mid    = msg.get("id", "")
+                texto  = msg.get("text", {}).get("body", "").strip()
+
+                if numero and texto:
+                    if mid and not _adquirir_lock(f"webhook:wa:{mid}", 120):
+                        logger.info(f"Webhook YCloud duplicado ignorado: {mid}")
+                    else:
+                        logger.info(f"WhatsApp (YCloud) msg de {numero}: {texto}")
+                        texto_com_canal = f"{texto} \ncanal de contato: *whatsapp*"
+                        _processar_e_responder("whatsapp", numero, texto_com_canal)
+
+        # ── Formato Meta WhatsApp Cloud API ───────────────────────────────────
+        elif body.get("object") == "whatsapp_business_account":
             for entry in body.get("entry", []):
                 for change in entry.get("changes", []):
                     value = change.get("value", {})
 
-                    # Ignora status de entrega (delivered, read, sent)
                     if "statuses" in value and "messages" not in value:
                         continue
 
@@ -402,8 +419,8 @@ def receive_zap_hook():
                             continue
 
                         numero = msg.get("from")
-                        mid = msg.get("id", "")
-                        texto = msg.get("text", {}).get("body", "").strip()
+                        mid    = msg.get("id", "")
+                        texto  = msg.get("text", {}).get("body", "").strip()
 
                         if not numero or not texto:
                             continue
@@ -412,12 +429,7 @@ def receive_zap_hook():
                             logger.info(f"Webhook WA duplicado ignorado: {mid}")
                             continue
 
-                        logger.info(f"WhatsApp msg de {numero}: {texto}")
-                        # TESTE — resposta fixa sem LLM (remover quando confirmar que chega)
-                        from core.messenger import enviar_mensagem
-                        enviar_mensagem("whatsapp", numero, "✅ Teste YCloud: mensagem recebida com sucesso!")
-                        continue
-                        # FIM TESTE
+                        logger.info(f"WhatsApp (Meta) msg de {numero}: {texto}")
                         texto_com_canal = f"{texto} \ncanal de contato: *whatsapp*"
                         _processar_e_responder("whatsapp", numero, texto_com_canal)
 

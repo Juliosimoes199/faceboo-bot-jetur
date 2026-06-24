@@ -310,11 +310,6 @@ def obter_runner() -> Runner:
 
 _PAUSA_ATIVA = os.environ.get("BOT_PAUSA_APOS_HANDOFF", "false").lower() == "true"
 
-_MENSAGEM_EM_PAUSA = (
-    "O teu pedido já foi registado e um dos nossos consultores vai entrar em contacto contigo em breve.\n\n"
-    "Obrigado pela confiança. A JEtur já está a tratar da tua viagem."
-)
-
 
 async def processar_mensagem(session_id: str, user_id: str, texto: str, canal: str = "") -> str:
     runner = obter_runner()
@@ -333,8 +328,8 @@ async def processar_mensagem(session_id: str, user_id: str, texto: str, canal: s
             state={"canal": canal, "sender_id": user_id},
         )
     elif _PAUSA_ATIVA and session.state.get("sessao_concluida"):
-        logger.info(f"Sessão concluída — bot em pausa para {session_id}")
-        return _MENSAGEM_EM_PAUSA
+        logger.info(f"Sessão concluída — mensagem ignorada para {session_id}")
+        return ""
 
     content = types.Content(role="user", parts=[types.Part(text=texto)])
     resposta_final = "Ocorreu um erro no processamento. Por favor tenta novamente."
